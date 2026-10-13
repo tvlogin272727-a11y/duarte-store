@@ -1,0 +1,329 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#100b1c">
+  <title>Duarte Store | Loja Oficial</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #100b1c;
+      color: #fff;
+    }
+    header {
+      padding: 22px 6%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #181126;
+      border-bottom: 1px solid #352447;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+    .logo { font-size: 23px; font-weight: 900; }
+    .logo span { color: #c084fc; }
+    button {
+      cursor: pointer;
+      border: 0;
+      border-radius: 10px;
+      font-weight: bold;
+      padding: 12px 16px;
+    }
+    .cart-button, .primary {
+      background: #a855f7;
+      color: white;
+    }
+    .hero {
+      padding: 70px 7%;
+      text-align: center;
+      background: radial-gradient(ellipse at top, #542582 0%, #211333 45%, #100b1c 78%);
+    }
+    .tag {
+      color: #e9c7ff;
+      border: 1px solid #8b5ab6;
+      border-radius: 30px;
+      padding: 8px 14px;
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    h1 { font-size: clamp(36px, 7vw, 62px); margin: 24px 0 12px; }
+    h1 span { color: #c084fc; }
+    .hero p { color: #c9bfd5; line-height: 1.7; }
+    .section { padding: 35px 6%; }
+    .section h2 { font-size: 26px; }
+    .muted { color: #b6aabe; }
+    .products {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .product {
+      background: #1c1428;
+      border: 1px solid #382649;
+      border-radius: 16px;
+      padding: 22px;
+    }
+    .product-icon {
+      height: 120px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #3c2057, #20152d);
+      border-radius: 12px;
+      font-size: 45px;
+    }
+    .product h3 { margin-bottom: 8px; }
+    .price { color: #d8a7ff; font-size: 23px; font-weight: bold; }
+    .product p { color: #b6aabe; font-size: 14px; line-height: 1.5; }
+    .product button { width: 100%; margin-top: 10px; }
+    .info {
+      margin: 20px 6%;
+      padding: 24px;
+      background: #1c1428;
+      border: 1px solid #382649;
+      border-radius: 15px;
+      line-height: 1.8;
+    }
+    footer {
+      text-align: center;
+      color: #a99ab6;
+      padding: 30px 15px;
+      border-top: 1px solid #352447;
+      font-size: 13px;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      background: #000b;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal {
+      width: 100%;
+      max-width: 440px;
+      max-height: 85vh;
+      overflow: auto;
+      background: #21172e;
+      border: 1px solid #68418a;
+      border-radius: 16px;
+      padding: 22px;
+    }
+    .cart-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #493455;
+    }
+    input {
+      width: 100%;
+      margin: 8px 0 14px;
+      padding: 13px;
+      background: #120d1a;
+      color: white;
+      border: 1px solid #59416b;
+      border-radius: 9px;
+    }
+    .secondary {
+      color: white;
+      background: #40324f;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .modal-actions button { flex: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DUARTE <span>STORE</span></div>
+  <button class="cart-button" onclick="openCart()">
+    🛒 Carrinho (<span id="count">0</span>)
+  </button>
+</header>
+
+<section class="hero">
+  <span class="tag">BEM-VINDO À DUARTE STORE</span>
+  <h1>Seu próximo nível<br>começa <span>aqui.</span></h1>
+  <p>Confira nossos produtos e escolha o que combina com você.</p>
+  <button class="primary" onclick="document.getElementById('loja').scrollIntoView({behavior:'smooth'})">
+    Explorar produtos ↓
+  </button>
+</section>
+
+<section class="section" id="loja">
+  <h2>🛍️ Nossa loja</h2>
+  <p class="muted">Confira os produtos disponíveis.</p>
+  <div class="products" id="products"></div>
+</section>
+
+<section class="info">
+  <h2>💜 Comprar é simples</h2>
+  <p>① Escolha seus produtos.<br>
+     ② Adicione ao carrinho.<br>
+     ③ Envie seu pedido pelo WhatsApp para combinar o pagamento.</p>
+  <p class="muted">Aguarde a confirmação do vendedor antes de considerar o pedido concluído.</p>
+</section>
+
+<footer>
+  © <span id="year"></span> Duarte Store. Todos os direitos reservados.
+</footer>
+
+<div class="overlay" id="overlay" onclick="outsideClose(event)">
+  <div class="modal">
+    <h2>🛒 Seu carrinho</h2>
+    <div id="cart-items"></div>
+    <h3>Total: <span id="total">R$ 0,00</span></h3>
+    <label for="customer">Seu nome</label>
+    <input id="customer" placeholder="Digite seu nome">
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeCart()">Voltar</button>
+      <button class="primary" onclick="checkout()">Fazer pedido</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // EDITE A LISTA DE PRODUTOS AQUI
+  const products = [
+    {
+      id: 1,
+      name: "Produto Premium",
+      price: 19.90,
+      icon: "💎",
+      description: "Produto especial da Duarte Store."
+    },
+    {
+      id: 2,
+      name: "Pacote Especial",
+      price: 29.90,
+      icon: "✨",
+      description: "Uma opção para quem quer mais."
+    },
+    {
+      id: 3,
+      name: "Oferta Exclusiva",
+      price: 9.90,
+      icon: "🎁",
+      description: "Confira esta oferta da loja."
+    }
+  ];
+
+  // TROQUE PELO NÚMERO DA LOJA, COM CÓDIGO DO PAÍS E DDD.
+  // Exemplo de formato: 5511999999999
+  const WHATSAPP = "5500000000000";
+
+  let cart = [];
+
+  const money = value => value.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+
+  function renderProducts() {
+    document.getElementById("products").innerHTML = products.map(p => `
+      <article class="product">
+        <div class="product-icon">${p.icon}</div>
+        <h3>${p.name}</h3>
+        <p>${p.description}</p>
+        <div class="price">${money(p.price)}</div>
+        <button class="primary" onclick="addToCart(${p.id})">
+          Adicionar ao carrinho
+        </button>
+      </article>
+    `).join("");
+  }
+
+  function addToCart(id) {
+    const product = products.find(p => p.id === id);
+    const item = cart.find(p => p.id === id);
+    if (item) item.qty++;
+    else cart.push({ ...product, qty: 1 });
+    updateCart();
+  }
+
+  function updateCart() {
+    document.getElementById("count").textContent =
+      cart.reduce((sum, p) => sum + p.qty, 0);
+
+    document.getElementById("cart-items").innerHTML =
+      cart.length ? cart.map(p => `
+        <div class="cart-line">
+          <div>${p.name}<br><small>${money(p.price)} cada</small></div>
+          <div>
+            <button class="secondary" onclick="changeQty(${p.id},-1)">−</button>
+            ${p.qty}
+            <button class="secondary" onclick="changeQty(${p.id},1)">+</button>
+          </div>
+        </div>
+      `).join("") : "<p class='muted'>Seu carrinho está vazio.</p>";
+
+    document.getElementById("total").textContent =
+      money(cart.reduce((sum, p) => sum + p.price * p.qty, 0));
+  }
+
+  function changeQty(id, delta) {
+    const item = cart.find(p => p.id === id);
+    if (!item) return;
+    item.qty += delta;
+    cart = cart.filter(p => p.qty > 0);
+    updateCart();
+  }
+
+  function openCart() {
+    updateCart();
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function closeCart() {
+    document.getElementById("overlay").style.display = "none";
+  }
+
+  function outsideClose(event) {
+    if (event.target.id === "overlay") closeCart();
+  }
+
+  function checkout() {
+    if (!cart.length) {
+      alert("Adicione pelo menos um produto ao carrinho.");
+      return;
+    }
+
+    const name = document.getElementById("customer").value.trim();
+    if (!name) {
+      alert("Digite seu nome antes de continuar.");
+      return;
+    }
+
+    if (WHATSAPP === "5500000000000") {
+      alert("O site ainda precisa do número de WhatsApp do vendedor. Edite a variável WHATSAPP no código.");
+      return;
+    }
+
+    const lines = cart.map(p =>
+      `- ${p.name} x${p.qty}: ${money(p.price * p.qty)}`
+    ).join("\n");
+
+    const total = cart.reduce((sum, p) => sum + p.price * p.qty, 0);
+    const message =
+      `Olá! Quero fazer um pedido na Duarte Store.\nNome: ${name}\n\n${lines}\n\nTotal: ${money(total)}`;
+
+    window.open(
+      "https://wa.me/" + WHATSAPP + "?text=" + encodeURIComponent(message),
+      "_blank"
+    );
+  }
+
+  document.getElementById("year").textContent = new Date().getFullYear();
+  renderProducts();
+  updateCart();
+</script>
+</body>
+</html>
