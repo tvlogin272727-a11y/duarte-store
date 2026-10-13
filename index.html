@@ -783,5 +783,162 @@
     renderCart();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <section id="painel-admin" style="display:none;max-width:650px;margin:30px auto;padding:20px;background:#101020;color:white;border-radius:15px;font-family:Arial,sans-serif">
+  <h2>👑 Painel Admin — Duarte Store</h2>
+  <div id="login-admin">
+    <p>Login do administrador</p>
+    <input id="email-admin" type="email" placeholder="E-mail" style="width:95%;padding:10px;margin:5px 0">
+    <input id="senha-admin" type="password" placeholder="Senha" style="width:95%;padding:10px;margin:5px 0">
+    <button id="entrar-admin" style="padding:10px 18px">Entrar</button>
+    <p id="mensagem-login"></p>
+  </div>
+  <div id="area-pedidos" style="display:none">
+    <button id="atualizar-pedidos">Atualizar pedidos</button>
+    <button id="sair-admin">Sair</button>
+    <div id="lista-pedidos"></div>
+  </div>
+</section>
+
+<script>
+const SUPABASE_URL = "https://zzakeprvrttywfcmpqsx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_zz42Slzb5_o4tQFR6Sed-g_iWSoue71";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const painelAdmin = document.getElementById("painel-admin");
+const mensagemLogin = document.getElementById("mensagem-login");
+const listaPedidos = document.getElementById("lista-pedidos");
+
+document.getElementById("entrar-admin").addEventListener("click", entrarAdmin);
+document.getElementById("atualizar-pedidos").addEventListener("click", carregarPedidos);
+document.getElementById("sair-admin").addEventListener("click", sairAdmin);
+
+async function entrarAdmin() {
+  const email = document.getElementById("email-admin").value.trim();
+  const password = document.getElementById("senha-admin").value;
+
+  mensagemLogin.textContent = "Entrando...";
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    mensagemLogin.textContent = "Não foi possível entrar: " + error.message;
+    return;
+  }
+
+  document.getElementById("login-admin").style.display = "none";
+  document.getElementById("area-pedidos").style.display = "block";
+  await carregarPedidos();
+}
+
+async function sairAdmin() {
+  await supabaseClient.auth.signOut();
+  document.getElementById("area-pedidos").style.display = "none";
+  document.getElementById("login-admin").style.display = "block";
+  mensagemLogin.textContent = "Sessão encerrada.";
+}
+
+async function carregarPedidos() {
+  listaPedidos.textContent = "Carregando pedidos...";
+
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+  if (authError || !user) {
+    listaPedidos.textContent = "Faz login novamente.";
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("pedidos")
+    .select("id, cliente_nome, cliente_contato, produtos, valor_total, status, criado_em")
+    .order("criado_em", { ascending: false });
+
+  if (error) {
+    listaPedidos.textContent = "Erro ao carregar pedidos: " + error.message;
+    return;
+  }
+
+  listaPedidos.replaceChildren();
+
+  if (!data || data.length === 0) {
+    listaPedidos.textContent = "Nenhum pedido encontrado.";
+    return;
+  }
+
+  for (const pedido of data) {
+    const card = document.createElement("div");
+    card.style.cssText = "background:#20203a;padding:15px;margin:12px 0;border-radius:10px";
+
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Pedido " + pedido.id.slice(0, 8);
+    card.appendChild(titulo);
+
+    const cliente = document.createElement("p");
+    cliente.textContent = "Cliente: " + (pedido.cliente_nome || "Não informado");
+    card.appendChild(cliente);
+
+    const contato = document.createElement("p");
+    contato.textContent = "Contato: " + (pedido.cliente_contato || "Não informado");
+    card.appendChild(contato);
+
+    const valor = document.createElement("p");
+    valor.textContent = "Total: R$ " + Number(pedido.valor_total).toFixed(2).replace(".", ",");
+    card.appendChild(valor);
+
+    const status = document.createElement("p");
+    status.textContent = "Status: " + pedido.status;
+    card.appendChild(status);
+
+    if (pedido.status === "aguardando") {
+      const confirmar = document.createElement("button");
+      confirmar.textContent = "Confirmar Pix recebido";
+      confirmar.style.cssText = "padding:10px;background:#16834a;color:white;border:0;border-radius:6px";
+      confirmar.addEventListener("click", () => atualizarPedido(pedido.id, "pago"));
+      card.appendChild(confirmar);
+
+      const cancelar = document.createElement("button");
+      cancelar.textContent = "Cancelar pedido";
+      cancelar.style.cssText = "padding:10px;margin-left:8px;background:#a32640;color:white;border:0;border-radius:6px";
+      cancelar.addEventListener("click", () => atualizarPedido(pedido.id, "cancelado"));
+      card.appendChild(cancelar);
+    }
+
+    listaPedidos.appendChild(card);
+  }
+}
+
+async function atualizarPedido(id, status) {
+  const pergunta = status === "pago"
+    ? "Só confirma se verificaste que o Pix entrou na tua conta."
+    : "Queres cancelar este pedido?";
+
+  if (!confirm(pergunta)) return;
+
+  const alteracao = { status };
+
+  if (status === "pago") {
+    alteracao.confirmado_em = new Date().toISOString();
+  }
+
+  const { error } = await supabaseClient
+    .from("pedidos")
+    .update(alteracao)
+    .eq("id", id);
+
+  if (error) {
+    alert("Não foi possível atualizar: " + error.message);
+    return;
+  }
+
+  alert("Pedido atualizado.");
+  await carregarPedidos();
+}
+</script>
 </body>
 </html>
