@@ -766,6 +766,9 @@
     document.getElementById("checkoutForm").addEventListener("submit", async event => {
       event.preventDefault();
       if (!cart.size) return;
+
+      const form = event.currentTarget;
+      const submitButton = form.querySelector('button[type="submit"]');
       const name = document.getElementById("customerName").value.trim();
       const contact = document.getElementById("customerContact").value.trim();
       const itens = [...cart.values()].map(({ product, quantity }) => ({
@@ -774,20 +777,40 @@
         subtotal: Number((product.price * quantity).toFixed(2))
       }));
       const result = document.getElementById("orderResult");
+      latestOrderText = makeOrderText(name, contact);
       result.textContent = "Registrando pedido...";
       result.classList.add("show");
-      const { data: pedidoSalvo, error } = await supabaseClient.from("pedidos").insert({
-        cliente_nome: name, cliente_contato: contact, produtos: itens,
-        valor_total: Number(getTotal().toFixed(2)), status: "aguardando"
-      }).select("id").maybeSingle();
-      latestOrderText = makeOrderText(name, contact);
-      if (error) {
-        result.textContent = latestOrderText + "\n\nATENÇÃO: não conseguimos registrar automaticamente este pedido no sistema. Copie o resumo e fale com a loja. (" + error.message + ")";
-      } else {
-        latestOrderText += "\nCódigo do pedido: " + (pedidoSalvo?.id || "registrado");
-        result.textContent = latestOrderText + "\n\nPedido registrado como AGUARDANDO. Envie o resumo à loja e aguarde a confirmação manual do Pix.";
+      if (submitButton) submitButton.disabled = true;
+
+      try {
+        // Não usamos .select() aqui: gravar o pedido não deve depender de uma política SELECT pública.
+        const { error } = await supabaseClient.from("pedidos").insert({
+          cliente_nome: name,
+          cliente_contato: contact,
+          produtos: itens,
+          valor_total: Number(getTotal().toFixed(2)),
+          status: "aguardando"
+        });
+
+        if (error) {
+          console.error("Erro ao salvar pedido no Supabase:", error);
+          result.textContent = latestOrderText + "\n\nERRO AO SALVAR: " + error.message +
+            "\nO pedido NÃO foi confirmado no sistema. Copie o resumo e envie à loja.";
+        } else {
+          result.textContent = latestOrderText +
+            "\n\nPedido registrado como AGUARDANDO. Envie o resumo à loja e aguarde a confirmação manual do Pix.";
+          cart.clear();
+          renderCart();
+        }
+      } catch (err) {
+        console.error("Falha inesperada ao salvar pedido:", err);
+        result.textContent = latestOrderText + "\n\nFALHA DE CONEXÃO: " +
+          (err?.message || "não foi possível conectar ao Supabase") +
+          "\nO pedido NÃO foi confirmado no sistema. Copie o resumo e tente novamente mais tarde.";
+      } finally {
+        if (submitButton) submitButton.disabled = false;
+        document.getElementById("copyOrder").style.display = "block";
       }
-      document.getElementById("copyOrder").style.display = "block";
     });
 
     document.getElementById("copyPixKey").addEventListener("click", async () => {
